@@ -5,10 +5,15 @@ import { extname, join, normalize } from 'node:path';
 const [dir = 'dist', port = '4173'] = process.argv.slice(2);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 createServer(async (req, res) => {
-  const path = normalize(new URL(req.url, 'http://x').pathname).replace(/^(\.\.[\/])+/, '');
+  let p = new URL(req.url, 'http://x').pathname;
+  if (p.endsWith('/')) p += 'index.html';
+  const f = normalize(join(dir, p));
   try {
-    const f = join(dir, path.endsWith('/') ? path + 'index.html' : path);
+    if (!f.startsWith(normalize(dir))) throw new Error('outside');
+    const body = await readFile(f);
     res.writeHead(200, { 'content-type': types[extname(f)] || 'application/octet-stream' });
-    res.end(await readFile(f));
-  } catch { res.writeHead(404).end('not found'); }
+    res.end(body);
+  } catch {
+    res.writeHead(404).end('not found');
+  }
 }).listen(+port, () => console.log('serving', dir, port));
