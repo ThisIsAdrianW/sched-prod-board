@@ -5,6 +5,11 @@ const list = document.querySelector('[data-testid="incident-list"]');
 const loader = document.querySelector('[data-testid="loader"]');
 const empty = document.querySelector('[data-testid="empty"]');
 const status = document.querySelector('[data-testid="status"]');
+const confirmBox = document.querySelector('[data-testid="confirm"]');
+const confirmText = document.querySelector('[data-testid="confirm-text"]');
+const confirmAck = document.querySelector('[data-testid="confirm-ack"]');
+const confirmCancel = document.querySelector('[data-testid="confirm-cancel"]');
+let confirming = null; // the incident id the person clicked Ack on, fixed at click time
 
 const byId = new Map(); // id -> incident (merged, so a delta or a full page both work)
 const acked = new Set();
@@ -49,11 +54,37 @@ function render() {
     .join('');
 }
 
-list.addEventListener('click', async (e) => {
+// Ack asks first. The confirm lives outside the list, so a refresh never moves or closes it,
+// and it names the incident id that was under the pointer when the person clicked.
+function openConfirm(id) {
+  const i = byId.get(id);
+  confirming = id;
+  confirmText.textContent = `Ack ${id}${i ? ' · ' + i.service + ' · ' + i.summary : ''}?`;
+  confirmBox.hidden = false;
+  confirmAck.focus();
+}
+function closeConfirm() {
+  confirming = null;
+  confirmBox.hidden = true;
+}
+
+list.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-testid="ack"]');
   if (!btn) return;
   const id = btn.closest('[data-testid="incident-row"]').dataset.id;
   if (pending.has(id) || acked.has(id)) return;
+  openConfirm(id);
+});
+
+confirmCancel.addEventListener('click', closeConfirm);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && confirming) closeConfirm();
+});
+
+confirmAck.addEventListener('click', async () => {
+  const id = confirming;
+  if (!id) return;
+  closeConfirm();
   pending.add(id);
   render();
   try {

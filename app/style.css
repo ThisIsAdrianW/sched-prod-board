@@ -16,3 +16,8 @@ button[data-testid="ack"] { font: inherit; padding: 4px 12px; min-height: 32px; 
 button[data-testid="ack"]:disabled { cursor: progress; opacity: .6; }
 .acked { color: #1a7f37; font-weight: 600; }
 @media (max-width: 640px) { .row { grid-template-columns: 1fr auto; padding: 8px 12px; } }
+.confirm { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 24px; background: #fff; border-top: 2px solid #1d1d1f; box-shadow: 0 -4px 12px rgba(0,0,0,.15); z-index: 10; }
+.confirm p { margin: 0; flex: 1 1 280px; font-weight: 600; }
+.confirm button { font: inherit; padding: 6px 16px; min-height: 36px; cursor: pointer; }
+[data-testid="confirm-ack"] { background: #1d1d1f; color: #fff; border: 0; }
+footer { padding-bottom: 80px; }
