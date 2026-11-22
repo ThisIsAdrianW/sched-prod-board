@@ -33,25 +33,47 @@ const localTime = (iso) => {
   return Number.isNaN(d.getTime()) ? iso : fmt.format(d);
 };
 
-function render() {
-  const items = [...byId.values()].sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt));
-  empty.hidden = items.length > 0;
-  list.innerHTML = items
-    .map((i) => {
-      const done = acked.has(i.id);
-      return `<li data-testid="incident-row" data-id="${esc(i.id)}" class="row ${esc(i.severity)}">
-        <span class="id">${esc(i.id)}</span>
+// The list is updated in place: a row that is already on the board is never rebuilt or moved, so a new
+// incident only adds a row at the top and the row under the pointer keeps its element.
+const rowEls = new Map(); // id -> <li>
+
+function makeRow(i) {
+  const li = document.createElement('li');
+  li.dataset.testid = 'incident-row';
+  li.setAttribute('data-testid', 'incident-row');
+  li.dataset.id = i.id;
+  li.className = `row ${i.severity}`;
+  li.innerHTML = `<span class="id">${esc(i.id)}</span>
         <span class="sev">${esc(i.severity)}</span>
         <span class="what">${esc(i.service)} · ${esc(i.region)} · ${esc(i.summary)}</span>
         <time datetime="${esc(i.openedAt)}">${esc(localTime(i.openedAt))}</time>
-        ${
-          done
-            ? '<span data-testid="acked" class="acked">acked</span>'
-            : `<button type="button" data-testid="ack" ${pending.has(i.id) ? 'disabled' : ''}>Ack</button>`
-        }
-      </li>`;
-    })
-    .join('');
+        <span class="act"></span>`;
+  return li;
+}
+
+function syncAction(li, id) {
+  const state = acked.has(id) ? 'acked' : pending.has(id) ? 'pending' : 'idle';
+  if (li.dataset.state === state) return;
+  li.dataset.state = state;
+  const act = li.querySelector('.act');
+  act.innerHTML =
+    state === 'acked'
+      ? '<span data-testid="acked" class="acked">acked</span>'
+      : `<button type="button" data-testid="ack" ${state === 'pending' ? 'disabled' : ''}>Ack</button>`;
+}
+
+function render() {
+  const items = [...byId.values()].sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt));
+  empty.hidden = items.length > 0;
+  items.forEach((i, k) => {
+    let li = rowEls.get(i.id);
+    if (!li) {
+      li = makeRow(i);
+      rowEls.set(i.id, li);
+    }
+    if (list.children[k] !== li) list.insertBefore(li, list.children[k] || null);
+    syncAction(li, i.id);
+  });
 }
 
 // Ack asks first. The confirm lives outside the list, so a refresh never moves or closes it,
